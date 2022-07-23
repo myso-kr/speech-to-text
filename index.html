@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="always">
+    <meta name="robots" content="noindex,nofollow">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+    <style>
+      html, body, #transcript { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+      #transcript {
+        background: #000; color: #fff; font-size: 1rem; line-height: 1.3em; padding: 0.3rem;
+        display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+      }
+      #transcript .script { }
+      #transcript .script.live { color: #666; font-size: 0.8em; }
+      #transcript .script.logs { color: #fff; height: 6.5em; }
+      #transcript .script::before { content: attr(data-lines); white-space: pre-line; }
+    </style>
+  </head>
+  <body>
+    <div id="transcript">
+      <div class="script live"></div>
+      <div class="script logs"></div>
+    </div>
+    <script>
+      (function() {
+        const container = document.querySelector('#transcript'), lines = [];
+        const recognition = window.__recognition || new webkitSpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang="ko-KR";
+        recognition.start();
+        recognition.onresult = async (event) => {
+          window.__transcript_reset = clearTimeout(window.__transcript_reset);
+          window.__transcript_timer = clearTimeout(window.__transcript_timer);
+          const transcript = Array.from(event.results).reduce((output, data) => {
+            if(!data.isFinal) container.querySelector('.script.live').dataset.lines = data[0]['transcript'];
+            return (data.isFinal ? data[0]['transcript'].trim() : null) || output;
+          }, null);
+          if(transcript && window.__transcript_lasts !== transcript && (window.__transcript_lasts = transcript)) {
+            lines.unshift(window.__transcript_lasts); lines.splice(5);
+            container.querySelector('.script.logs').dataset.lines = lines.join('\n');
+            window.__transcript_reset = setTimeout(()=>(recognition.stop(), recognition.start()), 30000);
+          }
+        };
+        recognition.onerror = async (event) => console.error(event);
+        window.__recognition = recognition;
+      })();
+    </script>
+  </body>
+</html>
